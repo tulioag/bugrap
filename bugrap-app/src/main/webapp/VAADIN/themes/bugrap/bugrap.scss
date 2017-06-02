@@ -1,5 +1,3 @@
-// If you edit this file you need to compile the theme. See README.md for details.
-
 // Global variable overrides. Must be declared before importing Valo.
 
 // Defines the plaintext font size, weight and family. Font size affects general component sizing.
@@ -31,8 +29,17 @@
 
 @import "../valo/valo.scss";
 
-@mixin mytheme {
+@mixin bugrap {
   @include valo;
 
   // Insert your own theme rules here
+  .login-container {
+  	border: 3px solid #f1f1f1;
+  	background: white;
+  }
+ 
+  .login-container .v-slot-large { text-align: left;  }
+  
+  .login-container .v-slot-large .v-icon-bug { margin-right: 7px; }
+
 }

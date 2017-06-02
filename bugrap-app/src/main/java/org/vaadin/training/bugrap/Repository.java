@@ -18,5 +18,10 @@ public class Repository {
         repo = new BugrapRepository(databasePath);
         return repo;
     }
+    
+    static void clear()
+    {
+        repo = null;
+    }
 
 }

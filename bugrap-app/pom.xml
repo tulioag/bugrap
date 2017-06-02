@@ -39,11 +39,11 @@
 
 		<!-- Add-on from this project, uncomment to enable client-side modifications -->
 		<!-- Note that Widgetset CDN can't be used with this. -->
- 		<dependency> 
- 			<groupId>${project.groupId}</groupId> 
- 			<artifactId>distribution-bar</artifactId> 
- 			<version>${project.version}</version>
- 		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>distribution-bar</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 
 		<!-- Backend implementation -->
 		<dependency>
@@ -59,10 +59,22 @@
 			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.vaadin</groupId>
+			<artifactId>vaadin-testbench</artifactId>
+			<version>5.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.github.bonigarcia</groupId>
+			<artifactId>webdrivermanager</artifactId>
+			<version>1.6.2</version>
+			<scope>test</scope>
+		</dependency>		
 	</dependencies>
 
 	<build>
-	 	<finalName>bugrap</finalName>
+		<finalName>bugrap</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -72,7 +84,7 @@
 					<failOnMissingWebXml>false</failOnMissingWebXml>
 				</configuration>
 			</plugin>
-			<!-- The Jetty plugin allows us to easily test the development build by
+			<!-- The Jetty plugin allows us to easily test the development build by 
 				running jetty:run on the command line. -->
 			<plugin>
 				<groupId>org.eclipse.jetty</groupId>
@@ -80,6 +92,9 @@
 				<version>${jetty.plugin.version}</version>
 				<configuration>
 					<scanIntervalSeconds>2</scanIntervalSeconds>
+					<webApp>
+						<contextPath>/bugrap</contextPath>
+					</webApp>
 				</configuration>
 			</plugin>
 			<plugin>

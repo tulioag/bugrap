@@ -47,7 +47,7 @@
 						</manifest>
 						<manifestEntries>
 							<Vaadin-Package-Version>1</Vaadin-Package-Version>
-							<Vaadin-Widgetsets>org.vaadin.training.MyAppWidgetset</Vaadin-Widgetsets>
+							<Vaadin-Widgetsets>org.vaadin.training.DistributionBarWidgetset</Vaadin-Widgetsets>
 						</manifestEntries>
 					</archive>
 				</configuration>
