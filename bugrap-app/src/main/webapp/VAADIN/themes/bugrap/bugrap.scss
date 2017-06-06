@@ -41,5 +41,21 @@
   .login-container .v-slot-large { text-align: left;  }
   
   .login-container .v-slot-large .v-icon-bug { margin-right: 7px; }
+  .full-screen { max-width: 800px; }
+  .main { width: 100%; height: 100%;}
 
+   //.header-top-right{ font-size: 12px; }
+   //.header-top-right{ margin-left:auto; margin-right: auto }
+  .header-top-right .label-username { 
+  	padding-right: 10px; 
+  	border-right: 2px solid #C8C8C8;
+  	font-size: 12px;
+  	margin-left: 7px;
+  }
+  .header-top-right .v-link {
+  	padding-left: 10px; 
+  	margin-right: 10px;
+  	font-size: 14px; 
+  }
+   
 }

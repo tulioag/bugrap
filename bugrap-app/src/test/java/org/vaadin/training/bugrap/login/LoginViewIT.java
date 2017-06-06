@@ -1,71 +1,39 @@
 package org.vaadin.training.bugrap.login;
 
-import static org.junit.Assert.*;
-
-import java.util.Set;
-
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.remote.DesiredCapabilities;
+import org.vaadin.training.bugrap.testing.BugrapIT;
+import org.vaadin.training.bugrap.util.TestUtil;
 
-import com.vaadin.testbench.TestBench;
-import com.vaadin.testbench.TestBenchTestCase;
-import com.vaadin.testbench.elements.ButtonElement;
-import com.vaadin.testbench.elements.NotificationElement;
-import com.vaadin.testbench.elements.PasswordFieldElement;
-import com.vaadin.testbench.elements.TextFieldElement;
-import com.vaadin.ui.Notification;
+public class LoginViewIT extends BugrapIT {
 
-import io.github.bonigarcia.wdm.ChromeDriverManager;
-
-public class LoginViewIT extends TestBenchTestCase {
-
-    @BeforeClass
-    public static void setupClass() {
-        ChromeDriverManager.getInstance().setup();
-    }
+    private LoginPage loginPage;
+    
 
     @Before
     public void setup() {
-        setDriver(TestBench.createDriver(new ChromeDriver(DesiredCapabilities.chrome())));
+        loginPage =  TestUtil.accessSystem(driver);
     }
 
     @After
     public void teardown() {
-        driver.close();
-        driver.quit();
+        loginPage = null;
     }
 
     @Test
     public void login_adminShouldLogin() {
         final String username = "admin";
         final String password = "admin";
-        NotificationElement notification = attemptLogin(username, password);
-        Set<String> classNames = notification.getClassNames();
-        assertTrue(classNames.contains("success"));
+        loginPage.login(username, password);
     }
 
     @Test
     public void login_adminWithWrongPasswordShouldNotLogin() {
         final String username = "admin";
         final String password = "wrongPassword";
-        NotificationElement notification = attemptLogin(username, password);
-        assertEquals(Notification.Type.ERROR_MESSAGE.getStyle(),
-                notification.getType());
+        loginPage.attemptLoginExpectingFailure(username, password);
 
     }
-
-    private NotificationElement attemptLogin(String username, String password) {
-        driver.get("http://localhost:8080/bugrap");
-        $(TextFieldElement.class).caption("Username").first()
-                .setValue(username);
-        $(PasswordFieldElement.class).caption("Password").first()
-                .setValue(password);
-        $(ButtonElement.class).caption("Log in").first().click();
-
-        return $(NotificationElement.class).first();
-    }
+  
 }

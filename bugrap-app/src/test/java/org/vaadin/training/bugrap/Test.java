@@ -2,7 +2,7 @@ package org.vaadin.training.bugrap;
 
 import org.vaadin.bugrap.domain.BugrapRepository;
 
-public class Teste {
+public class Test {
 
     public static void main(String[] args) {
         // final String db = "default";

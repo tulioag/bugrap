@@ -3,10 +3,11 @@
  */
 package org.vaadin.training.bugrap.login;
 
+import org.vaadin.bugrap.domain.BugrapRepository;
 import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.BugrapUI;
-import org.vaadin.training.bugrap.Repository;
 
+import com.vaadin.annotations.Title;
 import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
@@ -22,9 +23,12 @@ public class LoginView extends LoginDesign implements View {
 
     public static final String PATH = "login";
     
+    private BugrapRepository repo;
+    
     private Presenter presenter = new Presenter();
 
-    public LoginView() {
+    public LoginView(BugrapRepository repo) {
+        this.repo = repo;
         loginButton.addClickListener(e -> presenter
                 .authenticate(username.getValue(), password.getValue()));
         loginButton.setClickShortcut(KeyCode.ENTER);
@@ -53,7 +57,7 @@ public class LoginView extends LoginDesign implements View {
 
         public void authenticate(String username, String password) {
 
-            Reporter reporter = Repository.getInstance().authenticate(username,
+            Reporter reporter = repo.authenticate(username,
                     password);
             if (reporter == null) {
                 showLoginError("Invalid username/password");

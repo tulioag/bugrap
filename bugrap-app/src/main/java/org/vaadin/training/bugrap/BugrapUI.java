@@ -1,13 +1,13 @@
 package org.vaadin.training.bugrap;
 
-import java.nio.file.Path;
-
 import org.vaadin.bugrap.domain.entities.Reporter;
 
 import com.vaadin.annotations.Theme;
+import com.vaadin.annotations.Title;
 import com.vaadin.server.VaadinRequest;
+import com.vaadin.ui.ComponentContainer;
+import com.vaadin.ui.CssLayout;
 import com.vaadin.ui.UI;
-import com.vaadin.ui.VerticalLayout;
 
 /**
  * This UI is the application entry point. A UI may either represent a browser
@@ -20,29 +20,27 @@ import com.vaadin.ui.VerticalLayout;
  */
 @SuppressWarnings("serial")
 @Theme("bugrap")
+@Title("Bugrap")
 public class BugrapUI extends UI {
 
     private BugrapNavigator navigator;
 
-    private Reporter user;
-
     @Override
     protected void init(VaadinRequest vaadinRequest) {
-        final VerticalLayout layout = new VerticalLayout();
+        final ComponentContainer layout = new CssLayout();
+        layout.addStyleName("main");
         setContent(layout);
-        navigator = new BugrapNavigator(this, this);
+        navigator = new BugrapNavigator(Repository.getInstance(), this, layout);
         setNavigator(navigator);
     }
 
     public void loginSuccessful(Reporter user) {
-        if (user == null)
-            throw new IllegalArgumentException("Reporter missing");
-        this.user = user;
-        navigator.addRestrictedViews();
+        navigator.setUser(user);
         navigator.goToDefault();
     }
 
     public static BugrapUI getCurrent() {
         return (BugrapUI) UI.getCurrent();
     }
+
 }

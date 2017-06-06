@@ -6,10 +6,21 @@
   <meta name="vaadin-version" content="8.0.5">
  </head>
  <body>
-  <vaadin-vertical-layout size-full>
-   <vaadin-label plain-text>
-     This is the combo with the projects 
-   </vaadin-label>
+  <vaadin-vertical-layout spacing="false" size-full margin="false">
+   <vaadin-vertical-layout style-name="full-screen" spacing="false" size-full margin="false" :center>
+    <vaadin-horizontal-layout spacing="false" width-full :center>
+     <vaadin-combo-box empty-selection-allowed="false" style-name="projects borderless" id="projects" width-full data-item-type="org.vaadin.bugrap.domain.entities.Project" _id="projects"></vaadin-combo-box>
+     <vaadin-label visible="false" style-name="failure" plain-text _id="noProjects">
+       No projects found 
+     </vaadin-label>
+     <vaadin-css-layout style-name="v-component-group header-top-right" :middle :right>
+      <vaadin-label icon="fonticon://Vaadin-Icons/e80d" style-name="label-username" plain-text _id="username">
+        User Name 
+      </vaadin-label>
+      <vaadin-link icon="fonticon://Vaadin-Icons/e6ac" caption="Logout" _id="logout"></vaadin-link>
+     </vaadin-css-layout>
+    </vaadin-horizontal-layout>
+   </vaadin-vertical-layout>
   </vaadin-vertical-layout>
  </body>
 </html>
