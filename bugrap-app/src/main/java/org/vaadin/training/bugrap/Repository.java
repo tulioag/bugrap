@@ -13,14 +13,13 @@ public class Repository {
     }
 
     static BugrapRepository create(String databasePath) {
-        if(repo != null)
+        if (repo != null)
             throw new IllegalStateException("Repository already initialized!");
         repo = new BugrapRepository(databasePath);
         return repo;
     }
-    
-    static void clear()
-    {
+
+    static void clear() {
         repo = null;
     }
 

@@ -9,6 +9,7 @@ import org.vaadin.training.bugrap.reports.ReportsView;
 
 import com.vaadin.navigator.Navigator;
 import com.vaadin.navigator.View;
+import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.ComponentContainer;
 import com.vaadin.ui.SingleComponentContainer;
 import com.vaadin.ui.UI;
@@ -24,7 +25,7 @@ public class BugrapNavigator extends Navigator {
     private BugrapRepository repo;
 
     private Reporter user;
-    
+
     /**
      * Initializes with the only view available for users not logged in.
      * 
@@ -51,9 +52,15 @@ public class BugrapNavigator extends Navigator {
         this.user = user;
         addRestrictedViews();
     }
-    
+
     public void addRestrictedViews() {
-        addView(ReportsView.PATH, () -> new ReportsView(repo,user));
+        addView(ReportsView.PATH, () -> new ReportsView(this, repo, user));
+    }
+
+    public void logout() {
+        getUI().getPage().setLocation(VaadinServlet.getCurrent()
+                .getServletContext().getContextPath());
+        getUI().getSession().close();
     }
 
     public void goToDefault() {
@@ -77,6 +84,5 @@ public class BugrapNavigator extends Navigator {
         }
 
     }
-    
-    
+
 }

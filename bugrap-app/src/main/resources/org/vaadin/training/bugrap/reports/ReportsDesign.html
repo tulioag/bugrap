@@ -8,7 +8,7 @@
  <body>
   <vaadin-vertical-layout spacing="false" size-full margin="false">
    <vaadin-vertical-layout style-name="full-screen" spacing="false" size-full margin="false" :center>
-    <vaadin-horizontal-layout spacing="false" width-full :center>
+    <vaadin-horizontal-layout spacing="false" width-full height="37px" :center>
      <vaadin-combo-box empty-selection-allowed="false" style-name="projects borderless" id="projects" width-full data-item-type="org.vaadin.bugrap.domain.entities.Project" _id="projects"></vaadin-combo-box>
      <vaadin-label visible="false" style-name="failure" plain-text _id="noProjects">
        No projects found 
@@ -17,9 +17,63 @@
       <vaadin-label icon="fonticon://Vaadin-Icons/e80d" style-name="label-username" plain-text _id="username">
         User Name 
       </vaadin-label>
-      <vaadin-link icon="fonticon://Vaadin-Icons/e6ac" caption="Logout" _id="logout"></vaadin-link>
+      <vaadin-button icon="fonticon://Vaadin-Icons/e6ac" style-name="small quiet borderless" plain-text _id="logout">
+        Logout 
+      </vaadin-button>
      </vaadin-css-layout>
     </vaadin-horizontal-layout>
+    <vaadin-horizontal-layout style-name="assignees-layout" :middle>
+     <vaadin-label plain-text>
+       Assignees 
+     </vaadin-label>
+     <vaadin-menu-bar style-name="radiobutton" height="20px" _id="assignee">
+      <menu checkable>
+        Only me 
+      </menu>
+      <menu checkable checked>
+        Everyone 
+      </menu>
+     </vaadin-menu-bar>
+    </vaadin-horizontal-layout>
+    <vaadin-grid width-full data-item-type="org.vaadin.bugrap.domain.entities.Report" _id="reportsTable" :center :expand>
+     <table>
+      <colgroup>
+       <col column-id="type" sortable>
+       <col column-id="summary" sortable>
+       <col column-id="description" sortable>
+       <col column-id="project" sortable>
+       <col column-id="version" sortable>
+       <col column-id="priority" sortable>
+       <col column-id="assigned" sortable>
+       <col column-id="status" sortable>
+       <col column-id="occursIn" sortable>
+       <col column-id="timestamp" sortable>
+       <col column-id="reportedTimestamp" sortable>
+       <col column-id="author" sortable>
+       <col column-id="consistencyVersion" sortable>
+       <col column-id="id" sortable>
+      </colgroup>
+      <thead>
+       <tr default>
+        <th plain-text column-ids="type">Type</th>
+        <th plain-text column-ids="summary">Summary</th>
+        <th plain-text column-ids="description">Description</th>
+        <th plain-text column-ids="project">Project</th>
+        <th plain-text column-ids="version">Version</th>
+        <th plain-text column-ids="priority">Priority</th>
+        <th plain-text column-ids="assigned">Assigned</th>
+        <th plain-text column-ids="status">Status</th>
+        <th plain-text column-ids="occursIn">OccursIn</th>
+        <th plain-text column-ids="timestamp">Timestamp</th>
+        <th plain-text column-ids="reportedTimestamp">ReportedTimestamp</th>
+        <th plain-text column-ids="author">Author</th>
+        <th plain-text column-ids="consistencyVersion">ConsistencyVersion</th>
+        <th plain-text column-ids="id">Id</th>
+       </tr>
+      </thead>
+      <tbody></tbody>
+     </table>
+    </vaadin-grid>
    </vaadin-vertical-layout>
   </vaadin-vertical-layout>
  </body>
