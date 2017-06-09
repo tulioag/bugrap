@@ -41,44 +41,52 @@
   .login-container .v-slot-large { text-align: left;  }
   
   .login-container .v-slot-large .v-icon-bug { margin-right: 7px; }
-  .full-screen { max-width: 800px; }
+  //.full-screen { max-width: 800px; }
   .main { width: 100%; height: 100%;}
 
+  .project-line {
+  	border-bottom: 1px solid;
+  }
    //.header-top-right{ font-size: 12px; }
    //.header-top-right{ margin-left:auto; margin-right: auto }
-  .header-top-right .label-username { 
-  	padding-right: 10px; 
-  	border-right: 2px solid #C8C8C8;
-  	font-size: 12px;
-  	margin-left: 7px;
+   .header-top-right{
+		.label-username { 
+		padding-right: 10px; 
+		border-right: 2px solid #C8C8C8;
+		font-size: $v-font-size--small;
+		font-weight: $v-font-weight + 100;
+		margin-left: 7px;
+	}
+	.v-button-caption { text-decoration: underline;}
   }
-  
   /*
   .v-button-active {
   	@include valo-button-style($unit-size:25px,$background-color: #BEBEBE,$shadow:0px 0px 4px #ccc,$border-radius:10px);
   }
   */
+    
+  .v-label-caption {  
+  	font-size : $v-caption-font-size;
+  	font-weight: $v-caption-font-weight;
+  }
   
-  .assignees-layout {font-size: 14px; }
-  
-  
-  
-  .v-menubar-radiobutton {
-  	@include valo-menubar-style($unit-size: 20px);
-  	
-  	border-radius:30px;
+  .v-menubar-selection {
+  	@include valo-menubar-style($unit-size: $v-unit-size * 0.8);
+  	font-size: $v-font-size;
+  	border-radius:12px;
   	overflow:hidden;
+  	
+  	.v-menubar-menuitem-caption { font-weight: 400; width: 80px; display:inline-block;}
+  	
+    .v-menubar-menuitem-checked, .v-menubar-menuitem-selected-children {
+  	  
+  	   		@include valo-menubar-menuitem-checked-style($v-selection-color);  	 		
+		  	
+	  	   .v-menubar-menuitem-caption {font-weight: bold;}
+  	}
+  	
   }
   
-  .v-menubar-radiobutton .v-menubar-menuitem-checked {
-  	background-color: #BEBEBE;
-  	background-image: none;
-  	color: #fff;
-  	//background-image: linear-gradient(to top,#BEBEBE 2%, #BEBEBE 98%)
-  	//box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
-  	//@include valo-menubar-menuitem-checked-style($background-color: #BEBEBE,$shadow:0px 0px 4px #ccc,$border-radius:10px);
-  }
   
-  .v-menubar-radiobutton .v-caption-radiobutton .v-caption-text {  display: inline-block;}
    
 }

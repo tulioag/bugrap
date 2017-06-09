@@ -6,10 +6,10 @@
   <meta name="vaadin-version" content="8.0.5">
  </head>
  <body>
-  <vaadin-vertical-layout spacing="false" size-full margin="false">
-   <vaadin-vertical-layout style-name="full-screen" spacing="false" size-full margin="false" :center>
-    <vaadin-horizontal-layout spacing="false" width-full height="37px" :center>
-     <vaadin-combo-box empty-selection-allowed="false" style-name="projects borderless" id="projects" width-full data-item-type="org.vaadin.bugrap.domain.entities.Project" _id="projects"></vaadin-combo-box>
+  <vaadin-vertical-layout spacing="false" size-full>
+   <vaadin-vertical-layout style-name="full-screen" size-full margin="false" :center>
+    <vaadin-horizontal-layout style-name="project-line" spacing="false" width-full height="37px">
+     <vaadin-combo-box empty-selection-allowed="false" style-name="projects small" id="projects" data-item-type="org.vaadin.bugrap.domain.entities.Project" _id="projects"></vaadin-combo-box>
      <vaadin-label visible="false" style-name="failure" plain-text _id="noProjects">
        No projects found 
      </vaadin-label>
@@ -22,18 +22,60 @@
       </vaadin-button>
      </vaadin-css-layout>
     </vaadin-horizontal-layout>
-    <vaadin-horizontal-layout style-name="assignees-layout" :middle>
-     <vaadin-label plain-text>
-       Assignees 
-     </vaadin-label>
-     <vaadin-menu-bar style-name="radiobutton" height="20px" _id="assignee">
-      <menu checkable>
-        Only me 
-      </menu>
-      <menu checkable checked>
-        Everyone 
-      </menu>
-     </vaadin-menu-bar>
+    <vaadin-horizontal-layout :middle>
+     <vaadin-horizontal-layout style-name="assignees-layout">
+      <vaadin-label style-name="caption" plain-text :middle :center>
+        Assignees 
+      </vaadin-label>
+      <vaadin-menu-bar style-name="selection" _id="assignee" :middle :center>
+       <menu checkable>
+         Only me 
+       </menu>
+       <menu checkable checked>
+         Everyone 
+       </menu>
+      </vaadin-menu-bar>
+     </vaadin-horizontal-layout>
+     <vaadin-horizontal-layout style-name="status-layout">
+      <vaadin-label style-name="caption" plain-text :middle :center>
+        Status 
+      </vaadin-label>
+      <vaadin-menu-bar style-name="selection" _id="status">
+       <menu checkable checked>
+         Open 
+       </menu>
+       <menu checkable>
+         All kinds 
+       </menu>
+       <menu>
+         Custom 
+        <menu checkable>
+          Open 
+        </menu>
+        <menu checkable>
+          Fixed 
+        </menu>
+        <menu checkable>
+          Invalid 
+        </menu>
+        <menu checkable>
+          Won't fix 
+        </menu>
+        <menu checkable>
+          Can't fix 
+        </menu>
+        <menu checkable>
+          Duplicate 
+        </menu>
+        <menu checkable>
+          Works for me 
+        </menu>
+        <menu checkable>
+          Need more information 
+        </menu>
+       </menu>
+      </vaadin-menu-bar>
+     </vaadin-horizontal-layout>
     </vaadin-horizontal-layout>
     <vaadin-grid width-full data-item-type="org.vaadin.bugrap.domain.entities.Report" _id="reportsTable" :center :expand>
      <table>

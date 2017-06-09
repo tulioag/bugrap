@@ -92,9 +92,6 @@
 				<version>${jetty.plugin.version}</version>
 				<configuration>
 					<scanIntervalSeconds>2</scanIntervalSeconds>
-					<webApp>
-						<contextPath>/bugrap</contextPath>
-					</webApp>
 				</configuration>
 			</plugin>
 			<plugin>

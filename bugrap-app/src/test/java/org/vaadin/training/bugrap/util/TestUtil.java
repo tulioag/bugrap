@@ -14,7 +14,7 @@ public class TestUtil {
     
     public static LoginPage accessSystem(WebDriver driver)
     {
-        driver.get("http://localhost:8080/bugrap");
+        driver.get("http://localhost:8080/");
         return new LoginPage(driver);
     }
 }

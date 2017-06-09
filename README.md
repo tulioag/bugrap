@@ -4,13 +4,20 @@ Bugrap
 Bugrap – an imaginary issue tracker
 
 
+TL;DR - Running
+===============
+- mvn install
+- cd bugrap-app
+- mvn jetty:run
+- (In browser) open http://localhost:8080
+
 Project Structure
 =================
 
 The project consists of the following modules:
 
 - parent project: common metadata and configuration
-- disttribution-bar: addon module, custom server and client side code 
+- distribution-bar: addon module, custom server and client side code 
 - bugrap-app: main application module
 
 Workflow
@@ -26,7 +33,7 @@ Other basic workflow steps:
 - developing the application
   - edit code in the app module
   - run "mvn jetty:run" in app module
-  - open http://localhost:8080/bugrap
+  - open http://localhost:8080
 - adding add-ons to the project
   - edit POM in app module, add add-ons as dependencies
 - client side changes

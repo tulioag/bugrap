@@ -27,6 +27,7 @@ public class ReportsDesign extends VerticalLayout {
     protected Label username;
     protected Button logout;
     protected MenuBar assignee;
+    protected MenuBar status;
     protected Grid<org.vaadin.bugrap.domain.entities.Report> reportsTable;
 
     public ReportsDesign() {

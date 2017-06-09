@@ -5,7 +5,7 @@
 /* This file prefixes all rules with the theme name to avoid causing conflicts with other themes. */
 /* The actual styles should be defined in bugrap.scss */
 .bugrap {
-  @include vaadin-form-template;
+  //@include vaadin-form-template;
   @include addons;
   @include bugrap;
 }

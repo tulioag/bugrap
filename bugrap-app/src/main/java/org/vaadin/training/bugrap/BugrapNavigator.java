@@ -11,7 +11,6 @@ import com.vaadin.navigator.Navigator;
 import com.vaadin.navigator.View;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.ComponentContainer;
-import com.vaadin.ui.SingleComponentContainer;
 import com.vaadin.ui.UI;
 
 /**
@@ -29,10 +28,6 @@ public class BugrapNavigator extends Navigator {
     /**
      * Initializes with the only view available for users not logged in.
      * 
-     * @param ui
-     *            {@link UI}
-     * @param container
-     *            {@link SingleComponentContainer}
      */
     public BugrapNavigator(BugrapRepository repo, UI ui,
             ComponentContainer container) {
@@ -40,21 +35,6 @@ public class BugrapNavigator extends Navigator {
         this.repo = repo;
         addView(LoginView.PATH, () -> new LoginView(repo));
         navigateTo(LoginView.PATH);
-    }
-
-    private void addView(String viewName, Supplier<View> supplier) {
-        addProvider(new BugrapViewProvider(viewName, supplier));
-    }
-
-    void setUser(Reporter user) {
-        if (user == null)
-            throw new IllegalArgumentException("Reporter missing");
-        this.user = user;
-        addRestrictedViews();
-    }
-
-    public void addRestrictedViews() {
-        addView(ReportsView.PATH, () -> new ReportsView(this, repo, user));
     }
 
     public void logout() {
@@ -67,6 +47,31 @@ public class BugrapNavigator extends Navigator {
         navigateTo("");
     }
 
+    /**
+     * 
+     * @param user Loged in user.
+     */
+    void setUser(Reporter user) {
+        if (user == null)
+            throw new IllegalArgumentException("Reporter missing");
+        this.user = user;
+        addRestrictedViews();
+    }
+
+    private void addView(String viewName, Supplier<View> supplier) {
+        addProvider(new BugrapViewProvider(viewName, supplier));
+    }
+
+    /**
+     * Adds views accessible after login.
+     */
+    private void addRestrictedViews() {
+        addView(ReportsView.PATH, () -> new ReportsView(this, repo, user));
+    }
+
+    /**
+     * Provider that creates views on demand.
+     */
     static class BugrapViewProvider extends StaticViewProvider {
         private static final View DUMMY = (event) -> {
         };
