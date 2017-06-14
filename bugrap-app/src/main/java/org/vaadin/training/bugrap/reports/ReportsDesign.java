@@ -7,6 +7,7 @@ import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
+import com.vaadin.ui.NativeSelect;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.declarative.Design;
 
@@ -26,6 +27,7 @@ public class ReportsDesign extends VerticalLayout {
     protected Label noProjects;
     protected Label username;
     protected Button logout;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.ProjectVersion> versions;
     protected MenuBar assignee;
     protected MenuBar status;
     protected Grid<org.vaadin.bugrap.domain.entities.Report> reportsTable;

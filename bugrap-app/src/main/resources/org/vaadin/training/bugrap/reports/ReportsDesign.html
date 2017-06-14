@@ -22,6 +22,12 @@
       </vaadin-button>
      </vaadin-css-layout>
     </vaadin-horizontal-layout>
+    <vaadin-horizontal-layout>
+     <vaadin-label style-name="caption" plain-text :middle :center>
+       Reports for 
+     </vaadin-label>
+     <vaadin-native-select empty-selection-caption="All versions" data-item-type="org.vaadin.bugrap.domain.entities.ProjectVersion" _id="versions"></vaadin-native-select>
+    </vaadin-horizontal-layout>
     <vaadin-horizontal-layout :middle>
      <vaadin-horizontal-layout style-name="assignees-layout">
       <vaadin-label style-name="caption" plain-text :middle :center>

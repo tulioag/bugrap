@@ -12,9 +12,13 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 
+import javax.servlet.http.Cookie;
+
+import org.ocpsoft.prettytime.PrettyTime;
 import org.vaadin.bugrap.domain.BugrapRepository;
 import org.vaadin.bugrap.domain.BugrapRepository.ReportsQuery;
 import org.vaadin.bugrap.domain.entities.Project;
+import org.vaadin.bugrap.domain.entities.ProjectVersion;
 import org.vaadin.bugrap.domain.entities.Report;
 import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.BugrapNavigator;
@@ -22,6 +26,8 @@ import org.vaadin.training.bugrap.BugrapNavigator;
 import com.vaadin.data.ValueProvider;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
+import com.vaadin.server.VaadinService;
+import com.vaadin.ui.Grid;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.Command;
 import com.vaadin.ui.MenuBar.MenuItem;
@@ -29,68 +35,100 @@ import com.vaadin.ui.MenuBar.MenuItem;
 @SuppressWarnings("serial")
 public class ReportsView extends ReportsDesign implements View {
 
-    private final Presenter presenter = new Presenter();
+    private final Presenter presenter;
 
     private final BugrapNavigator navigator;
 
-    private final BugrapRepository repo;
-
-    private final Reporter user;
+    private final PrettyTime prettyTime = new PrettyTime();
 
     public static final String PATH = "";
 
     public ReportsView(BugrapNavigator navigator, BugrapRepository repo,
             Reporter user) {
         this.navigator = navigator;
-        this.repo = repo;
-        this.user = user;
+        this.presenter = new Presenter(this, repo, user,
+                new VersionSelectionCookieManager());
     }
 
     @Override
     public void enter(ViewChangeEvent event) {
-        this.username.setValue(user.getName());
         this.logout.addClickListener((e) -> navigator.logout());
         this.projects.addSelectionListener(
                 e -> presenter.setProject(e.getSelectedItem().orElse(null)));
-        reportsTable.removeAllColumns();
-        ValueProvider<Report, String> getAssignedTo = (
-                r) -> r.getAssigned() != null ? r.getAssigned().getName()
-                        : null;
-        reportsTable.addColumn(ReportTypeFormatter.INSTANCE::getDescription)
-                .setCaption("TYPE");
-        reportsTable.addColumn(Report::getSummary).setCaption("SUMMARY");
-        reportsTable.addColumn(getAssignedTo).setCaption("ASSIGNED TO");
-
         new MenuBarSelectionPresenter(assignee, "Everyone",
                 new AssigneeConsumer());
         new MenuBarSelectionPresenter(status, "Open",
                 new StatusMenubarConsumer(presenter));
-        presenter.initialize();
+        versions.setEmptySelectionAllowed(false);
+        versions.addValueChangeListener((e) -> {
+            presenter.setProjectVersion(e.getValue());
+        });
+        presenter.initialize(new ReportsGridPresenter(reportsTable));
+        VaadinService.getCurrentRequest().getCookies();
     }
 
-    private void setProjects(Collection<Project> ps) {
+    void setUsername(String username) {
+        this.username.setValue(username);
+    }
+
+    void setProjects(Collection<Project> ps) {
         projects.setItems(ps);
         projects.setSelectedItem(ps.iterator().next());
     }
 
-    private void setReports(Collection<Report> reports) {
-        reportsTable.setItems(reports);
-    }
-
-    private void showNoProjectsMessage() {
+    void showNoProjectsMessage() {
         projects.setVisible(false);
         noProjects.setVisible(true);
     }
 
-    class Presenter {
+    void setVersions(Collection<ProjectVersion> versions) {
+        this.versions.setItems(versions);
+    }
 
-        private ReportsQuery query = new ReportsQuery();
+    void selectVersion(ProjectVersion version) {
+        this.versions.setSelectedItem(version);
+    }
+
+    /**
+     * 
+     * Controls the view and keeps state
+     * 
+     * @author Tulio Garcia
+     *
+     */
+    static class Presenter {
+
+        private final ReportsView view;
+        private final BugrapRepository repo;
+        private final Reporter user;
+        private final VersionSelectionPreferenceStorage versionSelectionStorage;
+
+        private final ProjectVersion nullVersion = new ProjectVersion();
+        private final ReportsQuery query = new ReportsQuery();
+
+        private ReportsGridPresenter reportsGridPresenter;
 
         private boolean initialized;
 
-        void initialize() {
+        Presenter(ReportsView view, BugrapRepository repo, Reporter user,
+                VersionSelectionPreferenceStorage versionSelectionStorage) {
+            this.view = view;
+            this.repo = repo;
+            this.user = user;
+            this.versionSelectionStorage = versionSelectionStorage;
+            this.nullVersion.setVersion("All versions");
+        }
+
+        /**
+         * Called once when the view is entered.
+         * 
+         * @param reportsGridPresenter {@link ReportsGridPresenter}
+         */
+        void initialize(ReportsGridPresenter reportsGridPresenter) {
             initialized = true;
+            this.reportsGridPresenter = reportsGridPresenter;
             initializeProjects();
+            view.setUsername(user.getName());
         }
 
         /**
@@ -103,17 +141,61 @@ public class ReportsView extends ReportsDesign implements View {
             if (query.project != null) {
                 reports = repo.findReports(query);
             }
-            setReports(reports);
+            reportsGridPresenter.setReports(reports);
+        }
+
+        private void updateProjectVersions() {
+            boolean showVersions = query.projectVersion == nullVersion;
+            Collection<ProjectVersion> availableVersions = recoverVersionData();
+            view.setVersions(availableVersions);
+            reportsGridPresenter.setShowVersions(showVersions);
+            ProjectVersion defaultVersion = nullVersion;
+            Long result = versionSelectionStorage.recover(query.project.getId());
+            if (result != null)
+                defaultVersion = availableVersions.stream()
+                        .filter(v -> result.longValue() == v.getId()).findAny()
+                        .orElse(nullVersion);
+            view.selectVersion(defaultVersion);
+        }
+
+        private Collection<ProjectVersion> recoverVersionData() {
+            Collection<ProjectVersion> versions = repo
+                    .findProjectVersions(query.project);
+            if (versions.size() == 1) {
+                return versions;
+            }
+            ArrayList<ProjectVersion> result = new ArrayList<>(
+                    versions.size() + 1);
+            result.add(nullVersion);
+            result.addAll(versions);
+            return result;
         }
 
         void setProject(Project project) {
             query.project = project;
+            updateProjectVersions();
+            setProjectVersion(nullVersion);
+        }
+
+        void setProjectVersion(ProjectVersion projectVersion) {
+            boolean isNull = projectVersion == nullVersion;
+            query.projectVersion = isNull ? null : projectVersion;
+            reportsGridPresenter.setShowVersions(isNull);
+            long projectId = query.project.getId();
+            if (isNull)
+                versionSelectionStorage.remove(projectId);
+            else
+                versionSelectionStorage.save(projectId, projectVersion.getId());
             update();
         }
 
         void setAssignee(Reporter assignee) {
             query.reportAssignee = assignee;
             update();
+        }
+
+        void setAssigneeOnlyMe(boolean onlyMe) {
+            setAssignee(onlyMe ? user : null);
         }
 
         void setStatus(Set<Report.Status> statuses) {
@@ -128,9 +210,10 @@ public class ReportsView extends ReportsDesign implements View {
             // Assuming everyone has access to all projects.
             Set<Project> projects = repo.findProjects();
             if (projects.isEmpty())
-                showNoProjectsMessage();
-            else
-                setProjects(new TreeSet<>(projects));
+                view.showNoProjectsMessage();
+            else {
+                view.setProjects(new TreeSet<>(projects));
+            }
         }
     }
 
@@ -151,8 +234,8 @@ public class ReportsView extends ReportsDesign implements View {
             if (t.size() > 1)
                 throw new IllegalArgumentException("Too many selections");
 
-            Reporter assignee = ONLY_ME_VALUE.equals(t.get(0)) ? user : null;
-            presenter.setAssignee(assignee);
+            boolean onlyMe = ONLY_ME_VALUE.equals(t.get(0));
+            presenter.setAssigneeOnlyMe(onlyMe);
         }
     }
 
@@ -187,7 +270,7 @@ class ReportTypeFormatter {
 }
 
 /**
- * Connects the view presenter with the status component. 
+ * Connects the view presenter with the status component.
  *
  */
 class StatusMenubarConsumer implements Consumer<List<String>> {
@@ -199,7 +282,7 @@ class StatusMenubarConsumer implements Consumer<List<String>> {
     }
 
     /**
-     * Maps the labels to statuses. 
+     * Maps the labels to statuses.
      */
     static class StatusMapper {
         private static final Map<String, Report.Status> statuses;
@@ -235,7 +318,8 @@ class StatusMenubarConsumer implements Consumer<List<String>> {
 }
 
 /**
- * Controls the menubar selection component, used for the assignee and status filters.
+ * Controls the menubar selection component, used for the assignee and status
+ * filters.
  *
  */
 @SuppressWarnings("serial")
@@ -285,7 +369,8 @@ class MenuBarSelectionPresenter implements MenuBar.Command {
     }
 
     /**
-     * Registers this as the {@link Command} for either this menu item or its children.
+     * Registers this as the {@link Command} for either this menu item or its
+     * children.
      * 
      */
     private void registerCommand(MenuItem menuItem) {
@@ -309,7 +394,8 @@ class MenuBarSelectionPresenter implements MenuBar.Command {
     }
 
     /**
-     * For menu itens with children, set checked if the is at least 1 child selected.
+     * For menu itens with children, set checked if the is at least 1 child
+     * selected.
      */
     private void defineCheckedStatusByChildren(MenuItem item) {
         boolean anyChildrenSelected = item.getChildren().stream()
@@ -345,4 +431,141 @@ class MenuBarSelectionPresenter implements MenuBar.Command {
         return result;
     }
 
+}
+
+class ReportsGridPresenter {
+
+    private final Grid<Report> grid;
+
+    private boolean showVersions = true;
+
+    public ReportsGridPresenter(Grid<Report> grid) {
+        super();
+        this.grid = grid;
+        formatTable();
+    }
+
+    public void setReports(Collection<Report> reports) {
+        grid.setItems(reports);
+    }
+
+    public void setShowVersions(boolean showVersions) {
+        if (this.showVersions != showVersions) {
+            this.showVersions = showVersions;
+            formatTable();
+        }
+    }
+
+    private void formatTable() {
+        grid.removeAllColumns();
+        if (showVersions)
+            grid.addColumn(Report::getVersion).setCaption("VERSION");
+        ValueProvider<Report, String> getAssignedTo = (
+                r) -> r.getAssigned() != null ? r.getAssigned().getName()
+                        : null;
+        grid.addColumn(ReportTypeFormatter.INSTANCE::getDescription)
+                .setCaption("TYPE");
+        grid.addColumn(Report::getSummary).setCaption("SUMMARY");
+        grid.addColumn(getAssignedTo).setCaption("ASSIGNED TO");
+
+    }
+
+}
+
+/**
+ *
+ * Interface for saving the version preferences.
+ * 
+ * @author Tulio Garcia
+ *
+ */
+interface VersionSelectionPreferenceStorage {
+
+    /**
+     * Saves the verstion preference for the specified project.
+     * 
+     * @param projectId
+     *            project id
+     * @param versionId
+     *            version id
+     */
+    void save(long projectId, long versionId);
+
+    /**
+     * Removes the preference, if exists.
+     * 
+     * @param projectId
+     *            project id
+     */
+    void remove(long projectId);
+
+    /**
+     * Recovers the preference value, if exists.
+     * 
+     * @param projectId
+     *            project id
+     * @return versionId, if exists. Null otherwise.
+     */
+    Long recover(long projectId);
+
+}
+
+/**
+ * 
+ * Implements the {@link VersionSelectionPreferenceStorage} interface using
+ * cookies to save the values.
+ * 
+ * 
+ * @author Tulio Garcia
+ *
+ */
+class VersionSelectionCookieManager
+        implements VersionSelectionPreferenceStorage {
+
+    private static final int MAX_AGE = 60 * 24 * 30 * 12;
+
+    /** {@inheritDoc} */
+    @Override
+    public void save(long projectId, long versionId) {
+        setCookie(projectId, versionId, MAX_AGE);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void remove(long projectId) {
+        setCookie(projectId, 0, 0);
+    }
+
+    void setCookie(long projectId, long versionId, int maxAge) {
+        String name = getName(projectId);
+        Cookie cookie = new Cookie(name, String.valueOf(versionId));
+        cookie.setMaxAge(maxAge);
+        cookie.setPath(VaadinService.getCurrentRequest().getContextPath());
+        VaadinService.getCurrentResponse().addCookie(cookie);
+
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Long recover(long projectId) {
+        Long result = null;
+        Cookie cookie = findByProjectId(projectId);
+        if (cookie != null) {
+            result = Long.valueOf(cookie.getValue());
+        }
+        return result;
+    }
+
+    private String getName(long projectId) {
+        return String.format("selectedVersion_%d", projectId);
+    }
+
+    private Cookie findByProjectId(long projectId) {
+        Cookie[] cookies = VaadinService.getCurrentRequest().getCookies();
+        final String name = getName(projectId);
+        for (Cookie cookie : cookies)
+            if (name.equals(cookie.getName()))
+                return cookie;
+        return null;
+    }
 }

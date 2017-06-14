@@ -3,18 +3,16 @@ package org.vaadin.training.bugrap.reports;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.openqa.selenium.By;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import com.beust.jcommander.internal.Nullable;
-import com.google.common.base.Predicate;
 import com.vaadin.testbench.TestBenchTestCase;
 import com.vaadin.testbench.elements.ComboBoxElement;
 import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.testbench.elements.GridElement.GridCellElement;
 import com.vaadin.testbench.elements.MenuBarElement;
+import com.vaadin.testbench.elements.NativeSelectElement;
+import com.vaadin.ui.NativeSelect;
 
 public class ReportsPage extends TestBenchTestCase {
     private ComboBoxElement comboBox;
@@ -42,6 +40,23 @@ public class ReportsPage extends TestBenchTestCase {
     public List<String> getHeaders() {
         return grid.getHeaderCells(0).stream().map(GridCellElement::getText)
                 .collect(Collectors.toList());
+    }
+
+    public String getSelectedVersion() {
+        return getSelectedVersionElement().getValue();
+    }
+
+    public List<String> getVersionOptions() {
+        return getSelectedVersionElement().getOptions().stream()
+                .map(o -> o.getText()).collect(Collectors.toList());
+    }
+
+    public void selectVersion(String text) {
+        getSelectedVersionElement().selectByText(text);
+    }
+
+    private NativeSelectElement getSelectedVersionElement() {
+        return $(NativeSelectElement.class).first();
     }
 
     public void filterAssigneeOnlyMe() {
