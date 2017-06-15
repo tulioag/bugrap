@@ -60,7 +60,8 @@ public class ReportsViewIT extends BugrapIT {
 
     static class TableHeaders {
         static final List<String> WITHOUT_VERSION = unmodifiableList(
-                Arrays.asList("TYPE", "SUMMARY", "ASSIGNED TO"));
+                Arrays.asList("PRIORITY", "TYPE", "SUMMARY", "ASSIGNED TO",
+                        "LAST MODIFIED", "REPORTED"));
         static final List<String> WITH_VERSION;
         static {
             List<String> tmp = new ArrayList<>(WITHOUT_VERSION.size() + 1);

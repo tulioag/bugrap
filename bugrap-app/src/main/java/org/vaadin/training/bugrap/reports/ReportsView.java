@@ -3,6 +3,7 @@ package org.vaadin.training.bugrap.reports;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -11,37 +12,45 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.servlet.http.Cookie;
 
-import org.ocpsoft.prettytime.PrettyTime;
 import org.vaadin.bugrap.domain.BugrapRepository;
 import org.vaadin.bugrap.domain.BugrapRepository.ReportsQuery;
 import org.vaadin.bugrap.domain.entities.Project;
 import org.vaadin.bugrap.domain.entities.ProjectVersion;
 import org.vaadin.bugrap.domain.entities.Report;
+import org.vaadin.bugrap.domain.entities.Report.Priority;
+import org.vaadin.bugrap.domain.entities.Report.Type;
 import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.BugrapNavigator;
+import org.vaadin.training.bugrap.util.TimeUtil;
 
 import com.vaadin.data.ValueProvider;
+import com.vaadin.data.provider.GridSortOrderBuilder;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
 import com.vaadin.server.VaadinService;
 import com.vaadin.ui.Grid;
+import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.Command;
 import com.vaadin.ui.MenuBar.MenuItem;
+import com.vaadin.ui.renderers.Renderer;
+import com.vaadin.ui.renderers.TextRenderer;
+
+import elemental.json.JsonValue;
 
 @SuppressWarnings("serial")
 public class ReportsView extends ReportsDesign implements View {
 
+    public static final String PATH = "";
+
     private final Presenter presenter;
 
     private final BugrapNavigator navigator;
-
-    private final PrettyTime prettyTime = new PrettyTime();
-
-    public static final String PATH = "";
 
     public ReportsView(BugrapNavigator navigator, BugrapRepository repo,
             Reporter user) {
@@ -63,8 +72,8 @@ public class ReportsView extends ReportsDesign implements View {
         versions.addValueChangeListener((e) -> {
             presenter.setProjectVersion(e.getValue());
         });
-        presenter.initialize(new ReportsGridPresenter(reportsTable));
-        VaadinService.getCurrentRequest().getCookies();
+        presenter.initialize(new ReportsGridPresenter(reportsTable,
+                TimeUtil.createTimeElapsedDateFormatter(getLocale())));
     }
 
     void setUsername(String username) {
@@ -122,7 +131,8 @@ public class ReportsView extends ReportsDesign implements View {
         /**
          * Called once when the view is entered.
          * 
-         * @param reportsGridPresenter {@link ReportsGridPresenter}
+         * @param reportsGridPresenter
+         *            {@link ReportsGridPresenter}
          */
         void initialize(ReportsGridPresenter reportsGridPresenter) {
             initialized = true;
@@ -150,7 +160,8 @@ public class ReportsView extends ReportsDesign implements View {
             view.setVersions(availableVersions);
             reportsGridPresenter.setShowVersions(showVersions);
             ProjectVersion defaultVersion = nullVersion;
-            Long result = versionSelectionStorage.recover(query.project.getId());
+            Long result = versionSelectionStorage
+                    .recover(query.project.getId());
             if (result != null)
                 defaultVersion = availableVersions.stream()
                         .filter(v -> result.longValue() == v.getId()).findAny()
@@ -211,9 +222,8 @@ public class ReportsView extends ReportsDesign implements View {
             Set<Project> projects = repo.findProjects();
             if (projects.isEmpty())
                 view.showNoProjectsMessage();
-            else {
+            else
                 view.setProjects(new TreeSet<>(projects));
-            }
         }
     }
 
@@ -239,34 +249,6 @@ public class ReportsView extends ReportsDesign implements View {
         }
     }
 
-}
-
-/**
- * Generates captions for {@link Type}
- *
- */
-class ReportTypeFormatter {
-    private EnumMap<Report.Type, String> descriptions = new EnumMap<>(
-            Report.Type.class);
-
-    static final ReportTypeFormatter INSTANCE = new ReportTypeFormatter();
-
-    private ReportTypeFormatter() {
-        for (Report.Type type : Report.Type.values()) {
-            String name = type.name();
-            String description = new StringBuilder().append(name.charAt(0))
-                    .append(name.substring(1).toLowerCase()).toString();
-            descriptions.put(type, description);
-        }
-    }
-
-    String getDescription(Report report) {
-        return toString(report.getType());
-    }
-
-    String toString(Report.Type type) {
-        return descriptions.get(type);
-    }
 }
 
 /**
@@ -318,7 +300,7 @@ class StatusMenubarConsumer implements Consumer<List<String>> {
 }
 
 /**
- * Controls the menubar selection component, used for the assignee and status
+ * Controls the MenuBar selection component, used for the assignee and status
  * filters.
  *
  */
@@ -439,9 +421,42 @@ class ReportsGridPresenter {
 
     private boolean showVersions = true;
 
-    public ReportsGridPresenter(Grid<Report> grid) {
-        super();
+    private Column<Report, ProjectVersion> columnVersion;
+
+    private Column<Report, Report.Priority> priorityColumn;
+
+    public ReportsGridPresenter(Grid<Report> grid,
+            Function<Date, String> dateFormatter) {
         this.grid = grid;
+        grid.removeAllColumns();
+
+        columnVersion = grid.addColumn(Report::getVersion)
+                .setCaption("VERSION");
+
+        priorityColumn = grid.addColumn(Report::getPriority)
+                .setRenderer(new PriorityRenderer()).setCaption("PRIORITY")
+                .setStyleGenerator(r -> "priority").setId("priority");
+
+        grid.addColumn(Report::getType).setRenderer(new ReportTypeRenderer())
+                .setCaption("TYPE");
+
+        grid.addColumn(Report::getSummary).setCaption("SUMMARY");
+
+        grid.addColumn(Report::getAssigned)
+                .setRenderer(new ReportsViewRenderer<Reporter>(Reporter.class,
+                        Reporter::getName))
+                .setCaption("ASSIGNED TO");
+
+        Supplier<Renderer<Object>> dateRendererSupplier = () -> new ReportsViewRenderer<Date>(
+                Date.class, dateFormatter);
+
+        grid.addColumn(Report::getTimestamp)
+                .setRenderer(dateRendererSupplier.get())
+                .setCaption("LAST MODIFIED");
+
+        grid.addColumn(Report::getReportedTimestamp)
+                .setRenderer(dateRendererSupplier.get()).setCaption("REPORTED");
+
         formatTable();
     }
 
@@ -457,16 +472,15 @@ class ReportsGridPresenter {
     }
 
     private void formatTable() {
-        grid.removeAllColumns();
+        columnVersion.setHidden(!showVersions);
+        /*
+         * Because of issue #8316, sorting indicator is not being shown, but
+         * sorting works. https://github.com/vaadin/framework/issues/8316
+         */
+        GridSortOrderBuilder<Report> sortOrderBuilder = new GridSortOrderBuilder<>();
         if (showVersions)
-            grid.addColumn(Report::getVersion).setCaption("VERSION");
-        ValueProvider<Report, String> getAssignedTo = (
-                r) -> r.getAssigned() != null ? r.getAssigned().getName()
-                        : null;
-        grid.addColumn(ReportTypeFormatter.INSTANCE::getDescription)
-                .setCaption("TYPE");
-        grid.addColumn(Report::getSummary).setCaption("SUMMARY");
-        grid.addColumn(getAssignedTo).setCaption("ASSIGNED TO");
+            sortOrderBuilder.thenAsc(columnVersion);
+        grid.setSortOrder(sortOrderBuilder.thenDesc(priorityColumn).build());
 
     }
 
@@ -567,5 +581,63 @@ class VersionSelectionCookieManager
             if (name.equals(cookie.getName()))
                 return cookie;
         return null;
+    }
+}
+
+@SuppressWarnings("serial")
+class ReportsViewRenderer<T> extends TextRenderer {
+    private final Class<T> type;
+    private final Function<T, String> renderer;
+
+    ReportsViewRenderer(Class<T> type, Function<T, String> renderer) {
+        this.type = type;
+        this.renderer = renderer;
+    }
+
+    @Override
+    public JsonValue encode(Object value) {
+        T element = type.cast(value);
+        if (element != null) {
+            return super.encode(renderer.apply(element));
+        }
+        return super.encode(value);
+    }
+
+}
+
+@SuppressWarnings("serial")
+class PriorityRenderer extends ReportsViewRenderer<Priority> {
+
+    PriorityRenderer() {
+        super(Priority.class, priority -> {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i <= priority.ordinal(); i++)
+                sb.append("❚");
+
+            return sb.toString();
+        });
+    }
+}
+
+/**
+ * Generates captions for {@link Type}
+ *
+ */
+@SuppressWarnings("serial")
+class ReportTypeRenderer extends ReportsViewRenderer<Report.Type> {
+    private static EnumMap<Report.Type, String> descriptions = new EnumMap<>(
+            Report.Type.class);
+    static {
+        for (Report.Type type : Report.Type.values()) {
+            String name = type.name();
+            String description = new StringBuilder().append(name.charAt(0))
+                    .append(name.substring(1).toLowerCase()).toString();
+            descriptions.put(type, description);
+        }
+
+    }
+
+    ReportTypeRenderer() {
+        super(Report.Type.class, descriptions::get);
     }
 }

@@ -12,7 +12,6 @@ import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.testbench.elements.GridElement.GridCellElement;
 import com.vaadin.testbench.elements.MenuBarElement;
 import com.vaadin.testbench.elements.NativeSelectElement;
-import com.vaadin.ui.NativeSelect;
 
 public class ReportsPage extends TestBenchTestCase {
     private ComboBoxElement comboBox;

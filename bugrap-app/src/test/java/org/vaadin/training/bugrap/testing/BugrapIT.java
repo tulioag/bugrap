@@ -30,13 +30,15 @@ public abstract class BugrapIT extends TestBenchTestCase {
 
     @Before
     public final void setupBugrapTest() {
-        ChromeOptions options = new ChromeOptions();
 
         Map<String, Object> prefs = new HashMap<String, Object>();
         prefs.put("credentials_enable_service", false);
         prefs.put("profile.password_manager_enabled", false);
+        prefs.put("intl.accept_languages", "en");
 
-        options.setExperimentalOption("prefs", prefs);  
+        ChromeOptions options = new ChromeOptions();
+        options.setExperimentalOption("prefs", prefs);
+        options.addArguments("--lang=en");
         setDriver(TestBench.createDriver(new ChromeDriver(options)));
     }
     
