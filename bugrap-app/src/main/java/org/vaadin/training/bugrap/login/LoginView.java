@@ -5,6 +5,7 @@ package org.vaadin.training.bugrap.login;
 
 import org.vaadin.bugrap.domain.BugrapRepository;
 import org.vaadin.bugrap.domain.entities.Reporter;
+import org.vaadin.training.MyComponent;
 import org.vaadin.training.bugrap.BugrapUI;
 
 import com.vaadin.event.ShortcutAction.KeyCode;

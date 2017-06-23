@@ -9,6 +9,7 @@ import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.NativeSelect;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.VerticalSplitPanel;
 import com.vaadin.ui.declarative.Design;
 
 /** 
@@ -30,7 +31,19 @@ public class ReportsDesign extends VerticalLayout {
     protected NativeSelect<org.vaadin.bugrap.domain.entities.ProjectVersion> versions;
     protected MenuBar assignee;
     protected MenuBar status;
+    protected VerticalSplitPanel splitPanel;
     protected Grid<org.vaadin.bugrap.domain.entities.Report> reportsTable;
+    protected VerticalLayout reportPanel;
+    protected VerticalLayout reportCommands;
+    protected Button linkOpenReportNewWindow;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Priority> updatePriority;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Type> updateType;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Status> updateStatus;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.Reporter> updateAssignedTo;
+    protected NativeSelect<org.vaadin.bugrap.domain.entities.ProjectVersion> updateVersion;
+    protected Button updateReportCommand;
+    protected Button revertReportCommand;
+    protected VerticalLayout reportDataLayout;
 
     public ReportsDesign() {
         Design.read(this);

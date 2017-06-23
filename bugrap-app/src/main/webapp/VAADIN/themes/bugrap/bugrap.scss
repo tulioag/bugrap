@@ -36,13 +36,19 @@
   .login-container {
   	border: 3px solid #f1f1f1;
   	background: white;
+  	
+  	.v-slot-large { text-align: left;  
+  	
+  		.v-icon-bug { margin-right: 7px; }
+  	}
   }
  
-  .login-container .v-slot-large { text-align: left;  }
+ 	.v-csslayout-main { 
+ 		width: 100%;
+ 		height : 100%;
+ 		}
   
-  .login-container .v-slot-large .v-icon-bug { margin-right: 7px; }
-  //.full-screen { max-width: 800px; }
-  .main { width: 100%; height: 100%;}
+  .reports-root { margin: 37px !important; }
 
   .project-line {
   	border-bottom: 1px solid;
@@ -64,6 +70,7 @@
   	@include valo-button-style($unit-size:25px,$background-color: #BEBEBE,$shadow:0px 0px 4px #ccc,$border-radius:10px);
   }
   */
+    
     
   .v-label-caption {  
   	font-size : $v-caption-font-size;
@@ -88,5 +95,27 @@
   }
   
   .v-grid-cell.priority { letter-spacing: -5px; }
-   
+  
+  .comment-content { white-space: normal; }
+  
+  .report-commands {
+  	//$v-background-color: #555;
+  	//$v-background-color: linear-gradient(to bottom, white, #D3D3D3);
+  	$v-background-color: #e1e1e1;
+  	$v-app-background-color: $v-background-color;
+  	background-color:$v-background-color;
+  	color: valo-font-color($v-background-color);
+  	@include valo-components;  	
+  	
+  	.v-horizontallayout { padding: 0 16px; }
+  } 
+  
+  .report-panel {  
+  	 border: 1px solid $v-background-color; 
+  	 
+  	 	.v-panel {
+  	 		overflow-y:scroll;
+  	 	}
+  	 
+  }
 }

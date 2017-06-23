@@ -1,10 +1,11 @@
 package org.vaadin.training.bugrap.reports;
 
+import static org.vaadin.training.bugrap.util.TimeUtil.createTimeElapsedDateFormatter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -15,29 +16,40 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.persistence.OptimisticLockException;
 import javax.servlet.http.Cookie;
 
 import org.vaadin.bugrap.domain.BugrapRepository;
 import org.vaadin.bugrap.domain.BugrapRepository.ReportsQuery;
+import org.vaadin.bugrap.domain.entities.Comment;
 import org.vaadin.bugrap.domain.entities.Project;
 import org.vaadin.bugrap.domain.entities.ProjectVersion;
 import org.vaadin.bugrap.domain.entities.Report;
 import org.vaadin.bugrap.domain.entities.Report.Priority;
+import org.vaadin.bugrap.domain.entities.Report.Status;
 import org.vaadin.bugrap.domain.entities.Report.Type;
 import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.BugrapNavigator;
-import org.vaadin.training.bugrap.util.TimeUtil;
+import org.vaadin.training.bugrap.util.ReportUtil;
 
-import com.vaadin.data.ValueProvider;
+import com.vaadin.data.Binder;
+import com.vaadin.data.ValidationException;
 import com.vaadin.data.provider.GridSortOrderBuilder;
+import com.vaadin.icons.VaadinIcons;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
+import com.vaadin.server.Page;
 import com.vaadin.server.VaadinService;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.Column;
+import com.vaadin.ui.Grid.SelectionMode;
+import com.vaadin.ui.ItemCaptionGenerator;
+import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.Command;
 import com.vaadin.ui.MenuBar.MenuItem;
+import com.vaadin.ui.NativeSelect;
+import com.vaadin.ui.Notification;
 import com.vaadin.ui.renderers.Renderer;
 import com.vaadin.ui.renderers.TextRenderer;
 
@@ -48,19 +60,26 @@ public class ReportsView extends ReportsDesign implements View {
 
     public static final String PATH = "";
 
+    private final Messages messages = new Messages();
+
     private final Presenter presenter;
 
     private final BugrapNavigator navigator;
 
+    private Function<Date, String> timeFormatter;
+
     public ReportsView(BugrapNavigator navigator, BugrapRepository repo,
             Reporter user) {
         this.navigator = navigator;
-        this.presenter = new Presenter(this, repo, user,
-                new VersionSelectionCookieManager());
+        this.presenter = new Presenter(this, new ReportViewControl(), repo,
+                user, new VersionSelectionCookieManager());
     }
 
     @Override
     public void enter(ViewChangeEvent event) {
+        linkOpenReportNewWindow
+                .addClickListener(e -> Notification.show("Implement"));
+        this.timeFormatter = createTimeElapsedDateFormatter(getLocale());
         this.logout.addClickListener((e) -> navigator.logout());
         this.projects.addSelectionListener(
                 e -> presenter.setProject(e.getSelectedItem().orElse(null)));
@@ -72,8 +91,12 @@ public class ReportsView extends ReportsDesign implements View {
         versions.addValueChangeListener((e) -> {
             presenter.setProjectVersion(e.getValue());
         });
-        presenter.initialize(new ReportsGridPresenter(reportsTable,
-                TimeUtil.createTimeElapsedDateFormatter(getLocale())));
+        reportsTable.setSelectionMode(SelectionMode.MULTI);
+        reportsTable.addSelectionListener(
+                e -> presenter.onSelection(e.getAllSelectedItems()));
+        // reportsTable.addItemClickListener(e -> )1
+        presenter.initialize(
+                new ReportsGridPresenter(reportsTable, timeFormatter));
     }
 
     void setUsername(String username) {
@@ -98,6 +121,10 @@ public class ReportsView extends ReportsDesign implements View {
         this.versions.setSelectedItem(version);
     }
 
+    public Messages getMessages() {
+        return messages;
+    }
+
     /**
      * 
      * Controls the view and keeps state
@@ -108,6 +135,7 @@ public class ReportsView extends ReportsDesign implements View {
     static class Presenter {
 
         private final ReportsView view;
+        private final ReportViewControl reportViewControl;
         private final BugrapRepository repo;
         private final Reporter user;
         private final VersionSelectionPreferenceStorage versionSelectionStorage;
@@ -115,13 +143,17 @@ public class ReportsView extends ReportsDesign implements View {
         private final ProjectVersion nullVersion = new ProjectVersion();
         private final ReportsQuery query = new ReportsQuery();
 
+        private Report currentReport;
+
         private ReportsGridPresenter reportsGridPresenter;
 
         private boolean initialized;
 
-        Presenter(ReportsView view, BugrapRepository repo, Reporter user,
+        Presenter(ReportsView view, ReportViewControl reportViewControl,
+                BugrapRepository repo, Reporter user,
                 VersionSelectionPreferenceStorage versionSelectionStorage) {
             this.view = view;
+            this.reportViewControl = reportViewControl;
             this.repo = repo;
             this.user = user;
             this.versionSelectionStorage = versionSelectionStorage;
@@ -129,7 +161,7 @@ public class ReportsView extends ReportsDesign implements View {
         }
 
         /**
-         * Called once when the view is entered.
+         * Called once, when the view is entered.
          * 
          * @param reportsGridPresenter
          *            {@link ReportsGridPresenter}
@@ -139,19 +171,26 @@ public class ReportsView extends ReportsDesign implements View {
             this.reportsGridPresenter = reportsGridPresenter;
             initializeProjects();
             view.setUsername(user.getName());
+            onSelection(Collections.emptySet());
         }
 
         /**
          * Query the database and update the reports table.
          */
-        void update() {
+        Set<Report> update() {
             if (!initialized)
-                return;
+                return null;
+            Set<Report> reports = queryDB();
+            reportsGridPresenter.setReports(reports);
+            return reports;
+        }
+
+        private Set<Report> queryDB() {
             Set<Report> reports = Collections.emptySet();
             if (query.project != null) {
                 reports = repo.findReports(query);
             }
-            reportsGridPresenter.setReports(reports);
+            return reports;
         }
 
         private void updateProjectVersions() {
@@ -225,6 +264,54 @@ public class ReportsView extends ReportsDesign implements View {
             else
                 view.setProjects(new TreeSet<>(projects));
         }
+
+        void onSelection(Set<Report> reports) {
+            if (reports.isEmpty()) {
+                // No projects are selected.
+                reportViewControl.hideReportDetails();
+                currentReport = null;
+            } else if (reports.size() == 1) {
+                // Single report mode
+                Report report = reports.iterator().next();
+                currentReport = report;
+                List<Comment> comments = repo.findComments(report);
+                Set<Reporter> assignableUsers = repo.findReporters();
+                Set<ProjectVersion> validVersions = repo
+                        .findProjectVersions(query.project);
+                reportViewControl.showReportDetails(report, comments);
+                reportViewControl.initialize(assignableUsers, validVersions);
+                reportViewControl.read(report);
+            } else {
+                // TODO Mass modification mode
+                reportViewControl.hideReportDetails();
+                currentReport = null;
+            }
+        }
+
+        void updateReport() {
+            try {
+                reportViewControl.write(currentReport);
+                Report report = repo.save(currentReport);
+                currentReport = report;
+                view.getMessages().showUpdateSucessfullMessage();
+                Set<Report> updatedReportsSet = queryDB();
+                reportsGridPresenter.setReports(updatedReportsSet);
+                if (updatedReportsSet.contains(report)) {
+                    reportsGridPresenter.select(report);
+                }
+            } catch (ValidationException e) {
+                view.getMessages().showValidationErrorsMessage();
+            } catch (OptimisticLockException e) {
+                view.getMessages().showConcurrentModificationErrorMessage();
+            }
+
+        }
+
+        void revertReport() {
+            reportViewControl.read(currentReport);
+        }
+
+        // void addSelection(Set<Report>)
     }
 
     /**
@@ -246,6 +333,153 @@ public class ReportsView extends ReportsDesign implements View {
 
             boolean onlyMe = ONLY_ME_VALUE.equals(t.get(0));
             presenter.setAssigneeOnlyMe(onlyMe);
+        }
+    }
+
+    /**
+     * Layout of a single comment.
+     * 
+     * @author Tulio Garcia
+     *
+     */
+    class CommentLayout extends Label {
+
+        CommentLayout(String autorName, Date date, String text) {
+            setIcon(VaadinIcons.USER);
+            setStyleName("comment-content");
+            setCaption(formatCaption(autorName, date));
+            setValue(text);
+        }
+
+        String formatCaption(String autorName, Date date) {
+            String formattedDate = timeFormatter.apply(date);
+            return String.format("%s (%s)", autorName, formattedDate);
+        }
+    }
+
+    /**
+     * 
+     * Controls the report viewing.
+     * 
+     * @author Tulio Garcia
+     *
+     */
+    class ReportViewControl {
+
+        private Binder<Report> binder = new Binder<>();
+
+        private float defaultSplitPosition = 70;
+
+        ReportViewControl() {
+            initSelect(updatePriority, EnumSet.allOf(Priority.class),
+                    ReportUtil::toString);
+            initSelect(updateType, EnumSet.allOf(Type.class),
+                    ReportUtil::toString);
+            initSelect(updateStatus, EnumSet.allOf(Status.class),
+                    Status::toString);
+            binder.forField(updatePriority).bind(Report::getPriority,
+                    Report::setPriority);
+            binder.forField(updateType).bind(Report::getType, Report::setType);
+            binder.forField(updateStatus).bind(Report::getStatus,
+                    Report::setStatus);
+            binder.forField(updateAssignedTo).bind(Report::getAssigned,
+                    Report::setAssigned);
+            binder.forField(updateVersion).bind(Report::getVersion,
+                    Report::setVersion);
+            updateReportCommand.addClickListener(e -> presenter.updateReport());
+            revertReportCommand.addClickListener(e -> presenter.revertReport());
+            storeDefaultSplitPosition();
+        }
+
+        void initialize(Collection<Reporter> assignableUsers,
+                Collection<ProjectVersion> versions) {
+
+            initSelect(updateAssignedTo, assignableUsers, Reporter::getName);
+            initSelect(updateVersion, versions, ProjectVersion::toString);
+            // updatePriority.setItemCaptionGenerator(itemCaptionGenerator);
+        }
+
+        private void storeDefaultSplitPosition() {
+            float splitPosition = splitPanel.getSplitPosition();
+            defaultSplitPosition = splitPosition < 100 ? splitPosition : 70;
+
+        }
+
+        private <T> void initSelect(NativeSelect<T> select,
+                Collection<T> values,
+                ItemCaptionGenerator<T> captionGenerator) {
+            select.clear();
+            select.setItems(values);
+            select.setItemCaptionGenerator(captionGenerator);
+        }
+
+        void read(Report report) {
+            binder.readBean(report);
+        }
+
+        void write(Report report) throws ValidationException {
+            binder.writeBean(report);
+        }
+
+        void showReportDetails(Report report, List<Comment> comments) {
+            if (!reportPanel.isVisible()) {
+                reportPanel.setVisible(true);
+                splitPanel.setSplitPosition(defaultSplitPosition);
+            }
+            reportDataLayout.removeAllComponents();
+            linkOpenReportNewWindow.setCaption(report.getSummary());
+            linkOpenReportNewWindow
+                    .addClickListener(e -> Notification.show("Implement"));
+            Function<Reporter, String> extractReporterName = r -> r != null
+                    ? r.getName() : "Unknown";
+
+            reportDataLayout.addComponent(new CommentLayout(
+                    extractReporterName.apply(report.getAuthor()),
+                    report.getReportedTimestamp(), report.getDescription()));
+
+            comments.stream()
+                    .map(c -> new CommentLayout(
+                            extractReporterName.apply(c.getAuthor()),
+                            c.getTimestamp(), c.getComment()))
+                    .forEach(reportDataLayout::addComponent);
+        }
+
+        void hideReportDetails() {
+            reportPanel.setVisible(false);
+            reportDataLayout.removeAllComponents();
+            storeDefaultSplitPosition();
+            splitPanel.setSplitPosition(100);
+            splitPanel.getSplitPosition();
+        }
+
+    }
+
+    /**
+     * 
+     * Messages to the user available in this view.
+     * 
+     * @author Tulio Garcia
+     *
+     */
+    class Messages {
+
+        void showValidationErrorsMessage() {
+            Notification.show("There are validation errors",
+                    Notification.Type.ERROR_MESSAGE);
+        }
+
+        void showConcurrentModificationErrorMessage() {
+            Notification.show("The report has been modified by another user",
+                    Notification.Type.ERROR_MESSAGE);
+        }
+
+        void showUpdateSucessfullMessage() {
+            Notification notification = new Notification("Update successful",
+                    Notification.Type.TRAY_NOTIFICATION);
+            notification.setDelayMsec(1000);
+            notification.setStyleName("success");
+            notification.show(Page.getCurrent());
+
         }
     }
 
@@ -296,7 +530,6 @@ class StatusMenubarConsumer implements Consumer<List<String>> {
         EnumSet<Report.Status> statuses = StatusMapper.map(t);
         presenter.setStatus(statuses);
     }
-
 }
 
 /**
@@ -421,47 +654,45 @@ class ReportsGridPresenter {
 
     private boolean showVersions = true;
 
-    private Column<Report, ProjectVersion> columnVersion;
+    private Column<Report, ?> columnVersion;
 
-    private Column<Report, Report.Priority> priorityColumn;
+    private Column<Report, ?> priorityColumn;
 
     public ReportsGridPresenter(Grid<Report> grid,
             Function<Date, String> dateFormatter) {
         this.grid = grid;
-        grid.removeAllColumns();
 
-        columnVersion = grid.addColumn(Report::getVersion)
-                .setCaption("VERSION");
+        columnVersion = grid.getColumn("version");
 
-        priorityColumn = grid.addColumn(Report::getPriority)
-                .setRenderer(new PriorityRenderer()).setCaption("PRIORITY")
-                .setStyleGenerator(r -> "priority").setId("priority");
+        priorityColumn = grid.getColumn("priority")
+                .setRenderer(new PriorityRenderer())
+                .setStyleGenerator(r -> "priority").setMinimumWidth(100);
 
-        grid.addColumn(Report::getType).setRenderer(new ReportTypeRenderer())
-                .setCaption("TYPE");
+        grid.getColumn("type").setRenderer(new ReportTypeRenderer());
 
-        grid.addColumn(Report::getSummary).setCaption("SUMMARY");
+        grid.getColumn("summary").setExpandRatio(2);
 
-        grid.addColumn(Report::getAssigned)
+        grid.getColumn("assigned")
                 .setRenderer(new ReportsViewRenderer<Reporter>(Reporter.class,
                         Reporter::getName))
-                .setCaption("ASSIGNED TO");
+                .setExpandRatio(1);
 
         Supplier<Renderer<Object>> dateRendererSupplier = () -> new ReportsViewRenderer<Date>(
                 Date.class, dateFormatter);
 
-        grid.addColumn(Report::getTimestamp)
-                .setRenderer(dateRendererSupplier.get())
-                .setCaption("LAST MODIFIED");
+        grid.getColumn("timestamp").setRenderer(dateRendererSupplier.get());
 
-        grid.addColumn(Report::getReportedTimestamp)
-                .setRenderer(dateRendererSupplier.get()).setCaption("REPORTED");
-
+        grid.getColumn("reportedTimestamp")
+                .setRenderer(dateRendererSupplier.get());
         formatTable();
     }
 
     public void setReports(Collection<Report> reports) {
         grid.setItems(reports);
+    }
+
+    public void select(Report report) {
+        grid.select(report);
     }
 
     public void setShowVersions(boolean showVersions) {
@@ -609,13 +840,7 @@ class ReportsViewRenderer<T> extends TextRenderer {
 class PriorityRenderer extends ReportsViewRenderer<Priority> {
 
     PriorityRenderer() {
-        super(Priority.class, priority -> {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i <= priority.ordinal(); i++)
-                sb.append("❚");
-
-            return sb.toString();
-        });
+        super(Priority.class, ReportUtil::toString);
     }
 }
 
@@ -625,19 +850,8 @@ class PriorityRenderer extends ReportsViewRenderer<Priority> {
  */
 @SuppressWarnings("serial")
 class ReportTypeRenderer extends ReportsViewRenderer<Report.Type> {
-    private static EnumMap<Report.Type, String> descriptions = new EnumMap<>(
-            Report.Type.class);
-    static {
-        for (Report.Type type : Report.Type.values()) {
-            String name = type.name();
-            String description = new StringBuilder().append(name.charAt(0))
-                    .append(name.substring(1).toLowerCase()).toString();
-            descriptions.put(type, description);
-        }
-
-    }
 
     ReportTypeRenderer() {
-        super(Report.Type.class, descriptions::get);
+        super(Report.Type.class, ReportUtil::toString);
     }
 }

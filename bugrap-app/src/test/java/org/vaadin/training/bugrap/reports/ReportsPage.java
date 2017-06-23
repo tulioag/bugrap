@@ -37,8 +37,11 @@ public class ReportsPage extends TestBenchTestCase {
     }
 
     public List<String> getHeaders() {
-        return grid.getHeaderCells(0).stream().map(GridCellElement::getText)
+        List<String>  headers = grid.getHeaderCells(0).stream().map(GridCellElement::getText)
                 .collect(Collectors.toList());
+        //Removing selection header.
+        List<String> headersExceptSelection = headers.subList(1, headers.size());
+        return headersExceptSelection;
     }
 
     public String getSelectedVersion() {

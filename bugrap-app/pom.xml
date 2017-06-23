@@ -36,6 +36,14 @@
 			<groupId>com.vaadin</groupId>
 			<artifactId>vaadin-client-compiled</artifactId>
 		</dependency>
+		<!-- 
+		<dependency>
+			<groupId>com.vaadin</groupId>
+			<artifactId>vaadin-client</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		 -->
+		
 
 		<!-- Add-on from this project, uncomment to enable client-side modifications -->
 		<!-- Note that Widgetset CDN can't be used with this. -->
