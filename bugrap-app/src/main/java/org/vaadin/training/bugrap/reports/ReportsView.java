@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -144,6 +145,7 @@ public class ReportsView extends ReportsDesign implements View {
         private final ReportsQuery query = new ReportsQuery();
 
         private Report currentReport;
+        private Set<Report> realReports;
 
         private ReportsGridPresenter reportsGridPresenter;
 
@@ -270,10 +272,12 @@ public class ReportsView extends ReportsDesign implements View {
                 // No projects are selected.
                 reportViewControl.hideReportDetails();
                 currentReport = null;
+                realReports = null;
             } else if (reports.size() == 1) {
                 // Single report mode
                 Report report = reports.iterator().next();
                 currentReport = report;
+                realReports = null;
                 List<Comment> comments = repo.findComments(report);
                 Set<Reporter> assignableUsers = repo.findReporters();
                 Set<ProjectVersion> validVersions = repo
@@ -282,14 +286,77 @@ public class ReportsView extends ReportsDesign implements View {
                 reportViewControl.initialize(assignableUsers, validVersions);
                 reportViewControl.read(report);
             } else {
-                // TODO Mass modification mode
+                currentReport = createDummyReport(reports);
+                realReports = reports;
                 reportViewControl.hideReportDetails();
-                currentReport = null;
+                reportViewControl
+                        .showReportPanelMassModification(reports.size());
+                reportViewControl.read(currentReport);
             }
         }
 
+        Report createDummyReport(Set<Report> reports) {
+            Report dummy = new Report();
+            fillReport(dummy, findValue(reports, Report::getPriority),
+                    findValue(reports, Report::getType),
+                    findValue(reports, Report::getStatus),
+                    findValue(reports, Report::getAssigned),
+                    findValue(reports, Report::getVersion));
+            return dummy;
+        }
+
+        void fillReport(Report report, Priority priority, Type type,
+                Status status, Reporter assigned, ProjectVersion version) {
+            
+            consumeIfNotNull(report::setPriority, priority);
+            consumeIfNotNull(report::setType,type);
+            consumeIfNotNull(report::setStatus,status);
+            consumeIfNotNull(report::setVersion,version);
+            
+            //Assigned is nullable
+            report.setAssigned(assigned);
+
+        }
+
+        <T> void consumeIfNotNull(Consumer<T> c,T value) {
+            if(value != null)
+                c.accept(value);
+        }
+        
+        <T> T findValue(Set<Report> reports,
+                Function<Report, T> valueExtractor) {
+            T result = null;
+            Set<T> uniqueValues = new HashSet<>();
+            reports.stream().map(valueExtractor).forEach(uniqueValues::add);
+            if (uniqueValues.size() == 1) {
+                result = uniqueValues.iterator().next();
+            }
+            return result;
+        }
+
         void updateReport() {
-            try {
+            if (realReports == null)
+                updateSingleReport();
+            else {
+                executeEntityUpdate(() -> {
+
+                    reportViewControl.write(currentReport);
+                    realReports.forEach(report -> {
+                        fillReport(report, currentReport.getPriority(),
+                                currentReport.getType(),
+                                currentReport.getStatus(),
+                                currentReport.getAssigned(),
+                                currentReport.getVersion());
+                        repo.save(report);
+                    });
+                    view.getMessages().showUpdateSucessfullMessage();
+                    reportsGridPresenter.setReports(queryDB());
+                });
+            }
+        }
+
+        void updateSingleReport() {
+            executeEntityUpdate(() -> {
                 reportViewControl.write(currentReport);
                 Report report = repo.save(currentReport);
                 currentReport = report;
@@ -299,6 +366,12 @@ public class ReportsView extends ReportsDesign implements View {
                 if (updatedReportsSet.contains(report)) {
                     reportsGridPresenter.select(report);
                 }
+            });
+        }
+
+        void executeEntityUpdate(EntityUpdate entityUpdate) {
+            try {
+                entityUpdate.execute();
             } catch (ValidationException e) {
                 view.getMessages().showValidationErrorsMessage();
             } catch (OptimisticLockException e) {
@@ -307,11 +380,16 @@ public class ReportsView extends ReportsDesign implements View {
 
         }
 
+        @FunctionalInterface
+        interface EntityUpdate {
+
+            void execute() throws ValidationException;
+        }
+
         void revertReport() {
             reportViewControl.read(currentReport);
         }
 
-        // void addSelection(Set<Report>)
     }
 
     /**
@@ -421,13 +499,30 @@ public class ReportsView extends ReportsDesign implements View {
             binder.writeBean(report);
         }
 
+        void showReportPanelMassModification(int quantity) {
+            if (!reportPanel.isVisible()) {
+                reportPanel.setVisible(true);
+            }
+            reportDataLayout.removeAllComponents();
+            splitPanel.setSplitPosition(80);
+            splitPanel.setLocked(true);
+            linkOpenReportNewWindow.setVisible(false);
+            massModificationDescription.setVisible(true);
+            massModificationDescription
+                    .setValue(quantity + " reports selected");
+
+        }
+
         void showReportDetails(Report report, List<Comment> comments) {
             if (!reportPanel.isVisible()) {
                 reportPanel.setVisible(true);
                 splitPanel.setSplitPosition(defaultSplitPosition);
             }
+            massModificationDescription.setVisible(false);
+            splitPanel.setLocked(false);
             reportDataLayout.removeAllComponents();
             linkOpenReportNewWindow.setCaption(report.getSummary());
+            linkOpenReportNewWindow.setEnabled(true);
             linkOpenReportNewWindow
                     .addClickListener(e -> Notification.show("Implement"));
             Function<Reporter, String> extractReporterName = r -> r != null
@@ -449,7 +544,7 @@ public class ReportsView extends ReportsDesign implements View {
             reportDataLayout.removeAllComponents();
             storeDefaultSplitPosition();
             splitPanel.setSplitPosition(100);
-            splitPanel.getSplitPosition();
+            splitPanel.setLocked(true);
         }
 
     }
@@ -855,3 +950,4 @@ class ReportTypeRenderer extends ReportsViewRenderer<Report.Type> {
         super(Report.Type.class, ReportUtil::toString);
     }
 }
+

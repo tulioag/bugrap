@@ -36,6 +36,7 @@ public class ReportsDesign extends VerticalLayout {
     protected VerticalLayout reportPanel;
     protected VerticalLayout reportCommands;
     protected Button linkOpenReportNewWindow;
+    protected Label massModificationDescription;
     protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Priority> updatePriority;
     protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Type> updateType;
     protected NativeSelect<org.vaadin.bugrap.domain.entities.Report.Status> updateStatus;
