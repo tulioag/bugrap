@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="design-properties" content="{&quot;RULERS_VISIBLE&quot;:true,&quot;GUIDELINES_VISIBLE&quot;:false,&quot;SNAP_TO_OBJECTS&quot;:true,&quot;SNAP_TO_GRID&quot;:true,&quot;SNAPPING_DISTANCE&quot;:10,&quot;JAVA_SOURCES_ROOT&quot;:&quot;src/main/java&quot;,&quot;THEME&quot;:&quot;bugrap&quot;}">
+  <meta name="vaadin-version" content="8.0.5">
+ </head>
+ <body>
+  <vaadin-vertical-layout style-name="report-panel" spacing="false" margin="false">
+   <vaadin-label plain-text _id="breadcrumb">
+     Project name and version 
+   </vaadin-label>
+   <vaadin-vertical-layout style-name="report-commands" spacing="false" margin="false" _id="reportCommands">
+    <vaadin-link icon="fonticon://Vaadin-Icons/e7de" caption="Report summary" _id="linkOpenReportNewWindow"></vaadin-link>
+    <vaadin-label style-name="bold" plain-text _id="massModificationDescription">
+      3 reports found 
+    </vaadin-label>
+    <vaadin-horizontal-layout>
+     <vaadin-native-select caption="Priority" empty-selection-allowed="false" data-item-type="org.vaadin.bugrap.domain.entities.Report.Priority" _id="updatePriority"></vaadin-native-select>
+     <vaadin-native-select caption="Type" empty-selection-allowed="false" data-item-type="org.vaadin.bugrap.domain.entities.Report.Type" _id="updateType"></vaadin-native-select>
+     <vaadin-native-select caption="Status" empty-selection-allowed="false" data-item-type="org.vaadin.bugrap.domain.entities.Report.Status" _id="updateStatus"></vaadin-native-select>
+     <vaadin-native-select caption="Assigned to" empty-selection-allowed="false" data-item-type="org.vaadin.bugrap.domain.entities.Reporter" _id="updateAssignedTo"></vaadin-native-select>
+     <vaadin-native-select caption="Version" empty-selection-allowed="false" data-item-type="org.vaadin.bugrap.domain.entities.ProjectVersion" _id="updateVersion"></vaadin-native-select>
+     <vaadin-button style-name="primary" plain-text _id="updateReportCommand" :bottom :center>
+       Update 
+     </vaadin-button>
+     <vaadin-button plain-text _id="revertReportCommand" :bottom :center>
+       Revert 
+     </vaadin-button>
+    </vaadin-horizontal-layout>
+   </vaadin-vertical-layout>
+   <vaadin-panel style-name="borderless scroll-divider">
+    <vaadin-vertical-layout margin="false" _id="reportDataLayout">
+     <vaadin-label icon="fonticon://Vaadin-Icons/e80d" caption="user name (2 hours ago)" style-name="comment-content" plain-text :center :expand>
+       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et lacus vel dolor maximus lobortis a sed nisl. Maecenas auctor libero vitae leo interdum, ut tincidunt erat finibus. Praesent rhoncus bibendum molestie. Vivamus a mattis enim, non feugiat mauris. In rhoncus euismod quam et lacinia. Sed vel odio laoreet, convallis risus quis, pulvinar mauris. Nulla faucibus vel ante tristique dapibus. Ut egestas nunc ac augue lacinia, non auctor neque semper. Aliquam hendrerit at nisi nec dictum 
+     </vaadin-label>
+    </vaadin-vertical-layout>
+   </vaadin-panel>
+  </vaadin-vertical-layout>
+ </body>
+</html>

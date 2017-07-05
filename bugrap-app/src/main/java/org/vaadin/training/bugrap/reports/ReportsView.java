@@ -33,24 +33,17 @@ import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.BugrapNavigator;
 import org.vaadin.training.bugrap.util.ReportUtil;
 
-import com.vaadin.data.Binder;
 import com.vaadin.data.ValidationException;
 import com.vaadin.data.provider.GridSortOrderBuilder;
-import com.vaadin.icons.VaadinIcons;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
-import com.vaadin.server.Page;
 import com.vaadin.server.VaadinService;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.Grid.SelectionMode;
-import com.vaadin.ui.ItemCaptionGenerator;
-import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.Command;
 import com.vaadin.ui.MenuBar.MenuItem;
-import com.vaadin.ui.NativeSelect;
-import com.vaadin.ui.Notification;
 import com.vaadin.ui.renderers.Renderer;
 import com.vaadin.ui.renderers.TextRenderer;
 
@@ -63,7 +56,7 @@ public class ReportsView extends ReportsDesign implements View {
 
     private final Messages messages = new Messages();
 
-    private final Presenter presenter;
+    private Presenter presenter;
 
     private final BugrapNavigator navigator;
 
@@ -72,14 +65,18 @@ public class ReportsView extends ReportsDesign implements View {
     public ReportsView(BugrapNavigator navigator, BugrapRepository repo,
             Reporter user) {
         this.navigator = navigator;
-        this.presenter = new Presenter(this, new ReportViewControl(), repo,
-                user, new VersionSelectionCookieManager());
+        this.presenter = new Presenter(this,
+                new SplitViewControl(new ReportVisualizationController(
+                        reportVisualization, d -> this.timeFormatter.apply(d),
+                        report -> navigator
+                                .getReportVisualizationPath(report.getId()))),
+                repo, user, new VersionSelectionCookieManager());
+
     }
 
     @Override
     public void enter(ViewChangeEvent event) {
-        linkOpenReportNewWindow
-                .addClickListener(e -> Notification.show("Implement"));
+
         this.timeFormatter = createTimeElapsedDateFormatter(getLocale());
         this.logout.addClickListener((e) -> navigator.logout());
         this.projects.addSelectionListener(
@@ -136,7 +133,7 @@ public class ReportsView extends ReportsDesign implements View {
     static class Presenter {
 
         private final ReportsView view;
-        private final ReportViewControl reportViewControl;
+        private final SplitViewControl splitViewControl;
         private final BugrapRepository repo;
         private final Reporter user;
         private final VersionSelectionPreferenceStorage versionSelectionStorage;
@@ -151,11 +148,11 @@ public class ReportsView extends ReportsDesign implements View {
 
         private boolean initialized;
 
-        Presenter(ReportsView view, ReportViewControl reportViewControl,
+        Presenter(ReportsView view, SplitViewControl splitViewControl,
                 BugrapRepository repo, Reporter user,
                 VersionSelectionPreferenceStorage versionSelectionStorage) {
             this.view = view;
-            this.reportViewControl = reportViewControl;
+            this.splitViewControl = splitViewControl;
             this.repo = repo;
             this.user = user;
             this.versionSelectionStorage = versionSelectionStorage;
@@ -270,7 +267,7 @@ public class ReportsView extends ReportsDesign implements View {
         void onSelection(Set<Report> reports) {
             if (reports.isEmpty()) {
                 // No projects are selected.
-                reportViewControl.hideReportDetails();
+                splitViewControl.hideReportDetails();
                 currentReport = null;
                 realReports = null;
             } else if (reports.size() == 1) {
@@ -282,16 +279,15 @@ public class ReportsView extends ReportsDesign implements View {
                 Set<Reporter> assignableUsers = repo.findReporters();
                 Set<ProjectVersion> validVersions = repo
                         .findProjectVersions(query.project);
-                reportViewControl.showReportDetails(report, comments);
-                reportViewControl.initialize(assignableUsers, validVersions);
-                reportViewControl.read(report);
+                splitViewControl.showReportDetails(report, comments,
+                        assignableUsers, validVersions);
             } else {
                 currentReport = createDummyReport(reports);
                 realReports = reports;
-                reportViewControl.hideReportDetails();
-                reportViewControl
+                splitViewControl.hideReportDetails();
+                splitViewControl
                         .showReportPanelMassModification(reports.size());
-                reportViewControl.read(currentReport);
+                splitViewControl.readReport(currentReport);
             }
         }
 
@@ -307,22 +303,22 @@ public class ReportsView extends ReportsDesign implements View {
 
         void fillReport(Report report, Priority priority, Type type,
                 Status status, Reporter assigned, ProjectVersion version) {
-            
+
             consumeIfNotNull(report::setPriority, priority);
-            consumeIfNotNull(report::setType,type);
-            consumeIfNotNull(report::setStatus,status);
-            consumeIfNotNull(report::setVersion,version);
-            
-            //Assigned is nullable
+            consumeIfNotNull(report::setType, type);
+            consumeIfNotNull(report::setStatus, status);
+            consumeIfNotNull(report::setVersion, version);
+
+            // Assigned is nullable
             report.setAssigned(assigned);
 
         }
 
-        <T> void consumeIfNotNull(Consumer<T> c,T value) {
-            if(value != null)
+        <T> void consumeIfNotNull(Consumer<T> c, T value) {
+            if (value != null)
                 c.accept(value);
         }
-        
+
         <T> T findValue(Set<Report> reports,
                 Function<Report, T> valueExtractor) {
             T result = null;
@@ -340,7 +336,7 @@ public class ReportsView extends ReportsDesign implements View {
             else {
                 executeEntityUpdate(() -> {
 
-                    reportViewControl.write(currentReport);
+                    splitViewControl.writeReport(currentReport);
                     realReports.forEach(report -> {
                         fillReport(report, currentReport.getPriority(),
                                 currentReport.getType(),
@@ -357,7 +353,7 @@ public class ReportsView extends ReportsDesign implements View {
 
         void updateSingleReport() {
             executeEntityUpdate(() -> {
-                reportViewControl.write(currentReport);
+                splitViewControl.writeReport(currentReport);
                 Report report = repo.save(currentReport);
                 currentReport = report;
                 view.getMessages().showUpdateSucessfullMessage();
@@ -387,7 +383,7 @@ public class ReportsView extends ReportsDesign implements View {
         }
 
         void revertReport() {
-            reportViewControl.read(currentReport);
+            splitViewControl.readReport(currentReport);
         }
 
     }
@@ -415,166 +411,64 @@ public class ReportsView extends ReportsDesign implements View {
     }
 
     /**
-     * Layout of a single comment.
-     * 
-     * @author Tulio Garcia
-     *
-     */
-    class CommentLayout extends Label {
-
-        CommentLayout(String autorName, Date date, String text) {
-            setIcon(VaadinIcons.USER);
-            setStyleName("comment-content");
-            setCaption(formatCaption(autorName, date));
-            setValue(text);
-        }
-
-        String formatCaption(String autorName, Date date) {
-            String formattedDate = timeFormatter.apply(date);
-            return String.format("%s (%s)", autorName, formattedDate);
-        }
-    }
-
-    /**
      * 
      * Controls the report viewing.
      * 
      * @author Tulio Garcia
      *
      */
-    class ReportViewControl {
-
-        private Binder<Report> binder = new Binder<>();
+    class SplitViewControl {
 
         private float defaultSplitPosition = 70;
 
-        ReportViewControl() {
-            initSelect(updatePriority, EnumSet.allOf(Priority.class),
-                    ReportUtil::toString);
-            initSelect(updateType, EnumSet.allOf(Type.class),
-                    ReportUtil::toString);
-            initSelect(updateStatus, EnumSet.allOf(Status.class),
-                    Status::toString);
-            binder.forField(updatePriority).bind(Report::getPriority,
-                    Report::setPriority);
-            binder.forField(updateType).bind(Report::getType, Report::setType);
-            binder.forField(updateStatus).bind(Report::getStatus,
-                    Report::setStatus);
-            binder.forField(updateAssignedTo).bind(Report::getAssigned,
-                    Report::setAssigned);
-            binder.forField(updateVersion).bind(Report::getVersion,
-                    Report::setVersion);
-            updateReportCommand.addClickListener(e -> presenter.updateReport());
-            revertReportCommand.addClickListener(e -> presenter.revertReport());
+        private final ReportVisualizationController reportVisualizationController;
+
+        SplitViewControl(
+                ReportVisualizationController reportVisualizationController) {
+            this.reportVisualizationController = reportVisualizationController;
             storeDefaultSplitPosition();
-        }
-
-        void initialize(Collection<Reporter> assignableUsers,
-                Collection<ProjectVersion> versions) {
-
-            initSelect(updateAssignedTo, assignableUsers, Reporter::getName);
-            initSelect(updateVersion, versions, ProjectVersion::toString);
-            // updatePriority.setItemCaptionGenerator(itemCaptionGenerator);
+            reportVisualizationController.init(() -> presenter.updateReport(),
+                    () -> presenter.revertReport());
         }
 
         private void storeDefaultSplitPosition() {
+
             float splitPosition = splitPanel.getSplitPosition();
             defaultSplitPosition = splitPosition < 100 ? splitPosition : 70;
 
         }
 
-        private <T> void initSelect(NativeSelect<T> select,
-                Collection<T> values,
-                ItemCaptionGenerator<T> captionGenerator) {
-            select.clear();
-            select.setItems(values);
-            select.setItemCaptionGenerator(captionGenerator);
-        }
-
-        void read(Report report) {
-            binder.readBean(report);
-        }
-
-        void write(Report report) throws ValidationException {
-            binder.writeBean(report);
-        }
-
         void showReportPanelMassModification(int quantity) {
-            if (!reportPanel.isVisible()) {
-                reportPanel.setVisible(true);
-            }
-            reportDataLayout.removeAllComponents();
             splitPanel.setSplitPosition(80);
             splitPanel.setLocked(true);
-            linkOpenReportNewWindow.setVisible(false);
-            massModificationDescription.setVisible(true);
-            massModificationDescription
-                    .setValue(quantity + " reports selected");
-
+            reportVisualizationController
+                    .showReportPanelMassModification(quantity);
         }
 
-        void showReportDetails(Report report, List<Comment> comments) {
-            if (!reportPanel.isVisible()) {
-                reportPanel.setVisible(true);
+        void showReportDetails(Report report, List<Comment> comments,
+                Set<Reporter> assignableUsers,
+                Set<ProjectVersion> validVersions) {
+            if (!reportVisualizationController.isVisible()) {
                 splitPanel.setSplitPosition(defaultSplitPosition);
             }
-            massModificationDescription.setVisible(false);
             splitPanel.setLocked(false);
-            reportDataLayout.removeAllComponents();
-            linkOpenReportNewWindow.setCaption(report.getSummary());
-            linkOpenReportNewWindow.setEnabled(true);
-            linkOpenReportNewWindow
-                    .addClickListener(e -> Notification.show("Implement"));
-            Function<Reporter, String> extractReporterName = r -> r != null
-                    ? r.getName() : "Unknown";
-
-            reportDataLayout.addComponent(new CommentLayout(
-                    extractReporterName.apply(report.getAuthor()),
-                    report.getReportedTimestamp(), report.getDescription()));
-
-            comments.stream()
-                    .map(c -> new CommentLayout(
-                            extractReporterName.apply(c.getAuthor()),
-                            c.getTimestamp(), c.getComment()))
-                    .forEach(reportDataLayout::addComponent);
+            reportVisualizationController.showReportDetails(report, comments,
+                    assignableUsers, validVersions);
         }
 
         void hideReportDetails() {
-            reportPanel.setVisible(false);
-            reportDataLayout.removeAllComponents();
             storeDefaultSplitPosition();
             splitPanel.setSplitPosition(100);
             splitPanel.setLocked(true);
+            reportVisualizationController.hideReportDetails();
         }
 
-    }
-
-    /**
-     * 
-     * Messages to the user available in this view.
-     * 
-     * @author Tulio Garcia
-     *
-     */
-    class Messages {
-
-        void showValidationErrorsMessage() {
-            Notification.show("There are validation errors",
-                    Notification.Type.ERROR_MESSAGE);
+        void readReport(Report report) {
+            reportVisualizationController.read(report);
         }
 
-        void showConcurrentModificationErrorMessage() {
-            Notification.show("The report has been modified by another user",
-                    Notification.Type.ERROR_MESSAGE);
-        }
-
-        void showUpdateSucessfullMessage() {
-            Notification notification = new Notification("Update successful",
-                    Notification.Type.TRAY_NOTIFICATION);
-            notification.setDelayMsec(1000);
-            notification.setStyleName("success");
-            notification.show(Page.getCurrent());
-
+        void writeReport(Report report) throws ValidationException {
+            reportVisualizationController.write(report);
         }
     }
 
@@ -950,4 +844,3 @@ class ReportTypeRenderer extends ReportsViewRenderer<Report.Type> {
         super(Report.Type.class, ReportUtil::toString);
     }
 }
-

@@ -25,7 +25,7 @@ import org.vaadin.bugrap.domain.entities.Project;
 import org.vaadin.bugrap.domain.entities.ProjectVersion;
 import org.vaadin.bugrap.domain.entities.Reporter;
 import org.vaadin.training.bugrap.reports.ReportsView.Presenter;
-import org.vaadin.training.bugrap.reports.ReportsView.ReportViewControl;
+import org.vaadin.training.bugrap.reports.ReportsView.SplitViewControl;
 
 /**
  * @author Tulio Garcia
@@ -49,7 +49,7 @@ public class PresenterTest {
     private ReportsGridPresenter reportsGridPresenter;
 
     @Mock
-    private ReportViewControl reportViewControl;
+    private SplitViewControl reportViewControl;
 
     @Mock
     private Project project1;
