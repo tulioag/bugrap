@@ -1,6 +1,7 @@
 Bugrap
 ==============
 
+
 Bugrap – an imaginary issue tracker
 
 
